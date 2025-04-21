@@ -31,21 +31,23 @@ def make_bias_table(substring: str)->dict:
     return bias_table
 
 def Boyer_Moore_Horspool_algorithm(substring: str, main_text: str) -> int:
-    substring_len = len(substring)
+    substr_len = len(substring)
     main_text_len = len(main_text)
+    if substr_len == 0 or main_text_len == 0:
+        return -1
     bias_table = make_bias_table(substring)
     index = 0
-    while index + substring_len < main_text_len:
+    while index + substr_len < main_text_len:
         flag = True
-        for i in range(substring_len):
-            if substring[substring_len - 1 - i] != main_text[index + substring_len - 1 - i]:
+        for i in range(substr_len):
+            if substring[substr_len - 1 - i] != main_text[index + substr_len - 1 - i]:
                 if i == 0:
-                    if main_text[index + substring_len - 1 - i] in bias_table.keys():
-                        index += bias_table[main_text[index + substring_len - 1 - i]]
+                    if main_text[index + substr_len - 1 - i] in bias_table.keys():
+                        index += bias_table[main_text[index + substr_len - 1 - i]]
                     else:
                         index += bias_table["END"]
                 else:
-                    index += bias_table[substring[substring_len - 1]]
+                    index += bias_table[substring[substr_len - 1]]
                 flag = False
                 break
         if flag:

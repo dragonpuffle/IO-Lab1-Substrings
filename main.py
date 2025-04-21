@@ -15,14 +15,9 @@ def naive_algorithm(substring: str, main_text: str) -> int:
     if substr_len == 0 or main_text_len == 0:
         return -1
     for i in range(main_text_len):
-        flag = True
         if i + substr_len > main_text_len:
             return -1
-        for j in range(substr_len):
-            if substring[j] != main_text[i + j]:
-                flag = False
-                break
-        if flag:
+        if substring == main_text[i:i + substr_len]:
             return i
 
 

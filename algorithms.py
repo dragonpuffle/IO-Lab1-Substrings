@@ -42,6 +42,7 @@ def naive_algorithm(substring: str, main_text: str) -> int:
     return -1
 
 
+# Boyer-Moore-Horspool algorithm
 def make_bias_table(substring: str) -> dict:
     substring_len = len(substring)
     bias_table = {"END": substring_len}
@@ -53,7 +54,6 @@ def make_bias_table(substring: str) -> dict:
     return bias_table
 
 
-# Boyer-Moore-Horspool algorithm
 def Boyer_Moore_Horspool_algorithm(substring: str, main_text: str) -> int:
     reset_counter()
     substr_len = len(substring)

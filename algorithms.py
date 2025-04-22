@@ -26,7 +26,11 @@ def get_counter():
 # -------MAIN ALGORITHMS--------------------------------
 
 # Naive algorithm
-def naive_algorithm(substring: str, main_text: str) -> int:
+def make_none(substring: str) -> None:
+    return None
+
+
+def naive_algorithm(substring: str, main_text: str, temp: None = None) -> int:
     reset_counter()
     substr_len = len(substring)
     main_text_len = len(main_text)
@@ -54,13 +58,14 @@ def make_bias_table(substring: str) -> dict:
     return bias_table
 
 
-def Boyer_Moore_Horspool_algorithm(substring: str, main_text: str) -> int:
+def Boyer_Moore_Horspool_algorithm(substring: str, main_text: str, bias_table: dict | None = None) -> int:
     reset_counter()
     substr_len = len(substring)
     main_text_len = len(main_text)
     if substr_len == 0 or main_text_len == 0:
         return -1
-    bias_table = make_bias_table(substring)
+    if bias_table is None:
+        bias_table = make_bias_table(substring)
     index = 0
     while index + substr_len - 1 < main_text_len:
         flag = True
@@ -98,13 +103,14 @@ def make_prefix(substring: str) -> list:
     return prefix_arr
 
 
-def Knuth_Morris_Pratt_algorithm(substring: str, main_text: str) -> int:
+def Knuth_Morris_Pratt_algorithm(substring: str, main_text: str, prefix_arr: list | None = None) -> int:
     reset_counter()
     substr_len = len(substring)
     main_text_len = len(main_text)
     if substr_len == 0 or main_text_len == 0:
         return -1
-    prefix_arr = make_prefix(substring)
+    if prefix_arr is None:
+        prefix_arr = make_prefix(substring)
     substr_index = 0
     for index in range(main_text_len):
         flag = True

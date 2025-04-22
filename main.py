@@ -1,119 +1,87 @@
-# --------FILE UTILS-----------------------------------
+from collections.abc import Callable
+from time import time
+from typing import Dict
 
-def read_file(filename: str) -> str:
-    text = None
-    with open(filename, mode="r") as f:
-        text = f.read()
-        return text
+import matplotlib.pyplot as plt
+import pandas as pd
 
-
-# -------MAIN ALGORITHMS--------------------------------
-
-# Naive algorithm
-def naive_algorithm(substring: str, main_text: str) -> int:
-    substr_len = len(substring)
-    main_text_len = len(main_text)
-    if substr_len == 0 or main_text_len == 0:
-        return -1
-    for i in range(main_text_len):
-        if i + substr_len > main_text_len:
-            return -1
-        if substring == main_text[i:i + substr_len]:
-            return i
+from algorithms import (read_file, naive_algorithm, Boyer_Moore_Horspool_algorithm, Knuth_Morris_Pratt_algorithm,
+                        get_counter)
 
 
-def make_bias_table(substring: str) -> dict:
-    substring_len = len(substring)
-    bias_table = {"END": substring_len}
-    for i in range(1, substring_len):
-        if substring[substring_len - 1 - i] not in bias_table.keys():
-            bias_table[substring[substring_len - 1 - i]] = i
-    if substring[substring_len - 1] not in bias_table.keys():
-        bias_table[substring[substring_len - 1]] = substring_len
-    return bias_table
+def run_one_benchmark(alg_func: Callable, alg_name: str, bench_pattern: str, bench_text: str, results: list) -> None:
+    print(f'Searching {bench_pattern} in {bench_text}...')
+    substring = read_file(bench_pattern)
+    text = read_file(bench_text)
+
+    total_operations = 0
+    total_duration = 0
+    result = 0
+    for _ in range(100):
+        start = time()
+        result = alg_func(substring, text)
+        end = time()
+        duration = end - start
+        operations = get_counter()
+        total_operations += operations
+        total_duration += duration
+
+    results.append({'Algorithm': alg_name, 'Time': round(total_duration/100, 6), 'Operations': total_operations/100, 'Result': result,
+                    'Benchmark_text': bench_text, 'Benchmark_pattern': bench_pattern})
 
 
-# Boyer-Moore-Horspool algorithm
-def Boyer_Moore_Horspool_algorithm(substring: str, main_text: str) -> int:
-    substr_len = len(substring)
-    main_text_len = len(main_text)
-    if substr_len == 0 or main_text_len == 0:
-        return -1
-    bias_table = make_bias_table(substring)
-    index = 0
-    while index + substr_len - 1 < main_text_len:
-        flag = True
-        for i in range(substr_len):
-            if substring[substr_len - 1 - i] != main_text[index + substr_len - 1 - i]:
-                if i == 0:
-                    if main_text[index + substr_len - 1 - i] in bias_table.keys():
-                        index += bias_table[main_text[index + substr_len - 1 - i]]
-                    else:
-                        index += bias_table["END"]
-                else:
-                    index += bias_table[substring[substr_len - 1]]
-                flag = False
-                break
-        if flag:
-            return index
-    return -1
+def run_all_benchmarks(algs: Dict, bad_benchs: Dict, good_benchs: Dict) -> None:
+    start_total = time()
+    results = []
+    for alg_name, alg_func in algs.items():
+        print(f'Using {alg_name}...')
+        for bench_text, bench_pattern in bad_benchs.items():
+            run_one_benchmark(alg_func, alg_name, bench_pattern, bench_text, results)
+        for bench_text, bench_pattern in good_benchs.items():
+            run_one_benchmark(alg_func, alg_name, bench_pattern, bench_text, results)
+    end_total = time()
+    print(f'Total time: {round(end_total - start_total, 6)} seconds')
+
+    data = pd.DataFrame(results).sort_values(by=['Benchmark_text','Algorithm', 'Time'], axis=0)
+    print(data)
+    data.to_csv('report.csv', index=False, encoding='utf-8')
+
+    visualize(data)
+
+def visualize(data: pd.DataFrame) -> None:
+    pivot_time = data.pivot(index='Benchmark_text', columns='Algorithm', values='Time')
+    pivot_ops = data.pivot(index='Benchmark_text', columns='Algorithm', values='Operations')
 
 
-# Knuth–Morris–Pratt algorithm
-def make_prefix(substring: str) -> list:
-    substr_len = len(substring)
-    prefix_arr = [0] * substr_len
-    for i in range(1, substr_len):
-        current_prefix = prefix_arr[i - 1]
-        while current_prefix > 0 and substring[current_prefix] != substring[i]:
-            current_prefix = prefix_arr[current_prefix - 1]
-        if substring[current_prefix] == substring[i]:
-            current_prefix += 1
-        prefix_arr[i] = current_prefix
-    return prefix_arr
+    pivot_time.plot(kind='bar', figsize=(12, 6))
+    plt.title('Mean time for each algorithm by benchmark')
+    plt.xlabel('Benchmark')
+    plt.ylabel('Time, sec')
+    plt.tight_layout()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend(title='Algorithm')
+    plt.savefig('time_chart.png')
+    plt.show()
+
+    pivot_ops.plot(kind='bar', figsize=(12, 6))
+    plt.title('Mean operations for each algorithm by benchmark')
+    plt.xlabel('Benchmark')
+    plt.ylabel('Operations')
+    plt.tight_layout()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend(title='Algorithm')
+    plt.savefig('operations_chart.png')
+    plt.show()
 
 
-def Knuth_Morris_Pratt_algorithm(substring: str, main_text: str) -> int:
-    substr_len = len(substring)
-    main_text_len = len(main_text)
-    if substr_len == 0 or main_text_len == 0:
-        return -1
-    prefix_arr = make_prefix(substring)
-    substr_index = 0
-    for index in range(main_text_len):
-        flag = True
-        for j in range(substr_index, substr_len):
-            if substring[j] != main_text[index + j]:
-                substr_index = prefix_arr[j - 1]
-                flag = False
-                break
-        if flag:
-            return index
-    return -1
+if __name__ == '__main__':
+    algs = {
+        'Naive_algorithm': naive_algorithm,
+        'Boyer-Moore-Horspool': Boyer_Moore_Horspool_algorithm,
+        'Knuth-Morris-Pratt': Knuth_Morris_Pratt_algorithm
+    }
 
+    bad_benchs = {f'benchmarks/bad_t_{i}.txt': f'benchmarks/bad_w_{i}.txt' for i in range(1, 5)}
+    good_benchs = {f'benchmarks/good_t_{i}.txt': f'benchmarks/good_w_{i}.txt' for i in range(1, 5)}
 
-if __name__ == "__main__":
-    # Substring and text
-    substring = read_file("substr.txt")
-    text = read_file("test.txt")
-    print(f"Substring: {substring}\nText: {text}")
-    # Naive algorithm
-    print("\n-----Naive algorithm-----")
-    pos = naive_algorithm(substring, text)
-    print(f"Position of substring: {pos}")
-    if pos > 0:
-        print(f"\nText started with substring: {text[pos:]}")
-
-    # Boyer-Moore-Horspool algorithm
-    print("\n-----Boyer-Moore-Horspool algorithm-----")
-    pos = Boyer_Moore_Horspool_algorithm(substring, text)
-    print(f"Position of substring: {pos}")
-    if pos > 0:
-        print(f"\nText started with substring: {text[pos:]}")
-
-    # Knuth–Morris–Pratt algorithm
-    print("\n-----Knuth–Morris–Pratt algorithm-----")
-    pos = Knuth_Morris_Pratt_algorithm(substring, text)
-    print(f"Position of substring: {pos}")
-    if pos > 0:
-        print(f"\nText started with substring: {text[pos:]}")
+    run_all_benchmarks(algs, bad_benchs, good_benchs)
